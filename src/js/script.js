@@ -1,141 +1,131 @@
-import { Tetris } from "./tetris.js";
-import { PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, convertPositionToIndex } from "./utilities.js";
+const rangeModal = document.getElementById('rangeModal');
+const openRangeBtn = document.querySelector('.range-btn');
+const closeRangeBtn = document.querySelector('.close-btn');
+const changeRangeBtn = document.getElementById('changeRangeBtn');
+const rangeMinInput = document.getElementById('rangeMin');
+const rangeMaxInput = document.getElementById('rangeMax');
+const restartBtn = document.getElementById('restartBtn');
 
-let requestId;
-let timeoutId;
-const tetris = new Tetris();
-const cells = document.querySelectorAll('.grid>div');
+const output = document.getElementById('output');
+const prompt = document.getElementById('prompt');
+const input = document.getElementById('input');
 
-initKeyDown();
-moveDown();
+let minNumber = 1;
+let maxNumber = 100;
+let number = Math.floor(Math.random() * 100);
+let guesses = 0;
 
-function initKeyDown() {
-    document.addEventListener('keydown', onkeydown);
-}
+openRangeBtn.addEventListener('click', () => {
+    rangeModal.style.display = 'block';
+});
 
-function onkeydown(event) {
-    switch (event.key) {
-        case 'ArrowDown':
-            moveDown();
-            break;
-        case 'ArrowUp':
-            rotate();
-            break;
-        case 'ArrowLeft':
-            moveLeft();
-            break;
-        case 'ArrowRight':
-            moveRight();
-            break;
-        default:
-            break;
+closeRangeBtn.addEventListener('click', () => {
+    rangeModal.style.display = 'none';
+});
+
+changeRangeBtn.addEventListener('click', () => {
+    minNumber = parseInt(rangeMinInput.value) || 1;
+    maxNumber = parseInt(rangeMaxInput.value) || 100;
+
+    if (minNumber > maxNumber) {
+        [minNumber, maxNumber] = [maxNumber, minNumber];
     }
-}
 
-function moveDown() {
-    tetris.moveTetrominoDown();
-    draw();
-    stopLoop();
-    startLoop();
-    if(tetris.isGameOver) {
-        gameOver();
+    rangeModal.style.display = 'none';
+    resetGame();
+});
+
+
+
+prompt.addEventListener('submit', (event) => {
+    input.focus();
+    event.preventDefault(); 
+
+    processInput(input.value);
+    input.value = '';
+})
+
+const printMessage = async (message) => {
+    let li = document.createElement('li');
+    li.classList = 'list-item';
+    output.appendChild(li);
+
+    for (let i = 0; i < message.length; i++) {
+        await sleep(50);
+        li.textContent += message.charAt(i);
     }
+    
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+};
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const processInput = (input) => {
+    if(!input) return;
+
+    let guess = parseInt(input);
+
+    if(isNaN(guess)) {
+        printMessage('Введите число.');
+        return;
+    } 
+
+    if (!(minNumber < guess && guess < maxNumber)) {
+        printMessage('Вы вышли за пределы диапазона.');
+        return;
+    }
+
+    printMessage(input);
+
+    guesses += 1;
+
+    if(guess > number) {
+        printMessage('Много.');
+        parityOfNumber();
+    } else if (guess < number) {
+        printMessage('Мало.');
+        parityOfNumber();
+    } else {
+        const smile = finishSmile(guesses);
+        printMessage(`Верно, загаданное число ${guess}! \n Количество попыток ${guesses} ${smile}`);
+        prompt.style.display = 'none';
+        restartBtn.style.display = 'block';
+    }
+    
 }
 
-function moveLeft() {
-    tetris.moveTetrominoLeft();
-    draw();
-}
-
-function moveRight() {
-    tetris.moveTetrominoRight();
-    draw();
-}
-
-function rotate() {
-    tetris.rotateTetromino();
-    draw();
-}
-
-function startLoop() {
-    timeoutId = setTimeout(() => requestId = requestAnimationFrame(moveDown), 700);
-}
-
-function stopLoop() {
-    cancelAnimationFrame(requestId);
-    clearTimeout(timeoutId);
-}
-
-// отрисовка
-function draw() {
-    // перед каждой отрисовкой удаляем
-    cells.forEach(cell => cell.removeAttribute('class'));
-    // отрисовка поля
-    drawPlayfield();
-    // на каждом кадре заново рисуем поле с фигурками
-    drawTetromino();
-}
-
-// отрисовка поля
-function drawPlayfield() {
-    for( let row = 0; row < PLAYFIELD_ROWS; row++) {
-        for(let column = 0; column < PLAYFIELD_COLUMNS; column++) {
-            if(!tetris.playfield[row][column]) continue;
-            const cellIndex = convertPositionToIndex(row, column);
-            cells[cellIndex].classList.add('painted');
+const parityOfNumber = () => {
+    if(guesses % 3 === 0) {
+        if(number % 2 === 0) {
+            printMessage('Число четное');
+        } else {
+            printMessage('Число не четное');
         }
     }
 }
 
-// отрисовка фигурки
-function drawTetromino() {
-    // название фигурки
-    const name = tetris.tetromino.name;
-    // размер матрицы
-    const tetrominoMatrixSize = tetris.tetromino.matrix.length;
-    // проходимся по матрице фигурки
-    for(let row = 0; row < tetrominoMatrixSize; row++) {
-        for(let column = 0; column < tetrominoMatrixSize; column++) {
-            // если проверяемый элемент не равен 1, идем на след итерацию
-            if(!tetris.tetromino.matrix[row][column]) continue;
-            // строка на которой нужн нарисовать элемент фигуры, если элемент за пределами поля значит рисовать не нужно
-            if(tetris.tetromino.row + row < 0) continue;
-            // индкс в ячейке в списке див элементов
-            const cellIndex = convertPositionToIndex(tetris.tetromino.row + row, tetris.tetromino.column + column);
-            // добавляем ячейке класс такой же как имя элемента
-            cells[cellIndex].classList.add('painted');
-        }
+const finishSmile = (guesses) => {
+    if(guesses <= 10) {
+        return '(* ^ ω ^)';
+    } else {
+        return '(︶︹︺)';
     }
 }
 
-function gameOver() {
-    stopLoop();
-    document.removeEventListener('keydown', onkeydown);
-    gameOverAnimation();
+const resetGame = () => {
+    while (output.firstChild) {
+        output.removeChild(output.firstChild);
+    }
+    number = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+
+    guesses = 0;
+    printMessage(`Я загадал число от ${minNumber} до ${maxNumber}, попробуй его отгадать.`);
 }
 
-function gameOverAnimation() {
-    const filledCells = [...cells].filter(cell => cell.classList.length > 0);
-    filledCells.forEach((cell) => {
-        cell.classList.add('hide');
-        setTimeout(() => {
-            cell.removeAttribute('class');
-            showGameOverModal();
-        }, 3000);
-    });
-}
+restartBtn.addEventListener('click', () => {
+    resetGame();
+    restartBtn.style.display = 'none';
+    prompt.style.display = 'block';
+});
 
-function showGameOverModal() {
-    const modal = document.querySelector('.modal');
-    const scoreSpan = document.querySelector('.score-modal');
-    const restartButton = document.querySelector('.restart');
-
-    modal.style.display = 'block';
-    scoreSpan.textContent = tetris.score;
-    restartButton.addEventListener('click', restartGame);
-}
-
-function restartGame() {
-    location.reload();
-}
-
+printMessage(`Я загадал число от ${minNumber} до ${maxNumber}, попробуй его отгадать.`);
