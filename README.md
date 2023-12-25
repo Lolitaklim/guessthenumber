@@ -15,7 +15,7 @@ https://dolkalimona.ru/tictactoe/
 Репозиторий: https://github.com/Lolitaklim/interactivemap  
 https://dolkalimona.ru/interactivemap/  
 
-9. Калькулятор калорий 
+9. Калькулятор калорий  
 Репозиторий: https://github.com/Lolitaklim/caloriecalculator  
 https://dolkalimona.ru/calorie%D1%81alculator/  
 
